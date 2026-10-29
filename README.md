@@ -55,3 +55,46 @@ OmniRoute Nexus 采用四层流量调度架构：
 │    统一业务落地 URL           │
 │    全局联动更新               │
 └──────────────────────────────┘
+```
+
+## 3. 环境要求
+
+PHP 8.1 以上，MySQL 5.7 或 8.0，Redis。PHP 要装 `pdo_mysql` 和 `redis` 扩展，发通知的话还需要 `curl`。
+
+## 4. 安装
+
+先建库，再导入 `database.sql`：
+
+```bash
+mysql -uroot -p -e "CREATE DATABASE \`daoliu\` DEFAULT CHARACTER SET utf8mb4;"
+mysql -uroot -p daoliu < database.sql
+```
+
+然后改 `config/config.php`，把数据库账号密码填上。`app.key` 和 `app.cron_token` 也换成自己的随机字符串，Redis 有密码的话一起填。
+
+配置好以后访问 `/admin/`，默认账号是 `admin`，密码 `admin888`。进去先改密码，再去「系统设置」把最终落地地址和兜底地址填好，然后在域名池里把各层域名加进去，就能跑起来了。
+
+## 5. 定时任务
+
+域名检测、轮换和日志清理都靠定时任务，建议 5 分钟跑一次。
+
+用命令行：
+
+```bash
+*/5 * * * * cd /path/to/project && php task.php >> runtime/logs/cron.log 2>&1
+```
+
+或者用宝塔的 URL 计划任务：
+
+```text
+http://你的域名/task.php?token=你的cron_token&job=check
+```
+
+`token` 要和配置里的 `app.cron_token` 一致。`job` 可以是 `check`、`rotate`、`cleanup`，不填就全部执行。
+
+## 6. 上线前记得
+
+- 改掉默认管理员密码，`app.key` 和 `app.cron_token` 也别忘了换。
+- 数据库别用 root，给当前库的最小权限就行。
+- 能上 HTTPS 就上，后台也能开强制 HTTPS。
+- `runtime/` 里是日志和备份，别让外网直接访问到。
